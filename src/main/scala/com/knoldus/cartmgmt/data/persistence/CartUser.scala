@@ -2,22 +2,23 @@ package com.knoldus.cartmgmt.data.persistence
 
 import com.knoldus.cartmgmt.data.model._
 import slick.jdbc.MySQLProfile.api._
+import slick.lifted.ProvenShape
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 trait CartUser {
 
   class CartTableUser(tag: Tag) extends Table[UserCart](tag, "USER_CART") with DetailsUser {
 
-    def userId = column[Int]("USER_ID")
+    def userId: Rep[Int] = column[Int]("USER_ID")
 
-    def itemId = column[Int]("ITEM_ID")
+    def itemId: Rep[Int] = column[Int]("ITEM_ID")
 
-    def quantity = column[Int]("QUANTITY")
+    def quantity: Rep[Int] = column[Int]("QUANTITY")
 
-    def price = column[Double]("PRICE")
+    def price: Rep[Double] = column[Double]("PRICE")
 
-    def * = (userId, itemId, quantity, price).<>(UserCart.tupled, UserCart.unapply)
+    def * : ProvenShape[UserCart] = (userId, itemId, quantity, price).<>(UserCart.tupled, UserCart.unapply)
 
   }
 
@@ -26,7 +27,7 @@ trait CartUser {
   class UserCartRepo(implicit ec3: ExecutionContext) {
     this: DB =>
 
-    def all(id:Int) =db.run {
+    def all(id:Int): Future[Vector[Float]] =db.run {
       sql"""
       SELECT SUM(PRICE * QUANTITY)
       FROM USER_CART
@@ -34,16 +35,16 @@ trait CartUser {
         """.as[(Float)]
     }
 
-    def checkUIid(itemId: Int, userId: Int) = db.run {
+    def checkUIid(itemId: Int, userId: Int): Future[Seq[UserCart]] = db.run {
       userCartRef.filter(x => (x.itemId === itemId && x.userId === userId)).result
 
     }
 
-    def addQuantity(newItem: UserCart) = db.run {
+    def addQuantity(newItem: UserCart): Future[Int] = db.run {
       userCartRef += newItem
     }
 
-    def addNewRow(newItem: UserCart) = db.run {
+    def addNewRow(newItem: UserCart): Future[Int] = db.run {
       userCartRef += newItem
     }
   }

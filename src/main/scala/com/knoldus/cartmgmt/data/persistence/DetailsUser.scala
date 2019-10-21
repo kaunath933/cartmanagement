@@ -2,28 +2,29 @@ package com.knoldus.cartmgmt.data.persistence
 
 import com.knoldus.cartmgmt.data.model._
 import slick.jdbc.MySQLProfile.api._
+import slick.lifted.ProvenShape
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 trait DetailsUser {
 
   class UserDetailsTable(tag: Tag) extends Table[UserDetails](tag, "USER_DETAILS") {
 
-    def userId = column[Int]("userId", O.PrimaryKey)
+    def userId: Rep[Int] = column[Int]("userId", O.PrimaryKey)
 
-    def gender = column[String]("gender")
+    def gender: Rep[String] = column[String]("gender")
 
-    def userName = column[String]("userName")
+    def userName: Rep[String] = column[String]("userName")
 
-    def password = column[String]("password")
+    def password: Rep[String] = column[String]("password")
 
-    def email = column[String]("email")
+    def email: Rep[String] = column[String]("email")
 
-    def firstName = column[String]("firstName")
+    def firstName: Rep[String] = column[String]("firstName")
 
-    def lastName = column[String]("lastName")
+    def lastName: Rep[String] = column[String]("lastName")
 
-    def * = (userId, gender, userName, password, email, firstName, lastName).<>(UserDetails.tupled, UserDetails.unapply)
+    def * : ProvenShape[UserDetails] = (userId, gender, userName, password, email, firstName, lastName).<>(UserDetails.tupled, UserDetails.unapply)
 
   }
 
@@ -31,19 +32,18 @@ trait DetailsUser {
 
   class UserDetailsRepository(implicit ec: ExecutionContext) {
     this: DB =>
-    def all = db.run {
+    def all: Future[Seq[UserDetails]] = db.run {
       userDetailsRef.result
     }
 
-    def registerUser(user: UserDetails) = db.run {
+    def registerUser(user: UserDetails): Future[Int] = db.run {
       userDetailsRef += user
     }
 
-    def authentiacteUser(uid: Int) = db.run {
+    def authentiacteUser(uid: Int): Future[Seq[UserDetails]] = db.run {
             userDetailsRef.filter(x => x.userId === uid).result
        }
 
   }
 
 }
-

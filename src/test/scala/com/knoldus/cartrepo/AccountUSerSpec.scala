@@ -18,7 +18,7 @@ class AccountUSerSpec extends FunSuite with ScalaFutures with AccountUser {
   test("Get Details of all users accounts") {
     val response = testObj.all
     whenReady(response) { y =>
-      assert(y === Vector(UserAccount(1, "kaushik", 5000)))
+      assert(y === Seq(UserAccount(1, "kaushik", 5000)))
 
     }
 

@@ -50,11 +50,11 @@ class AllRoutes(repo: DetailsUser#UserDetailsRepository, repo3: AccountUser#User
 
       }
 
-    } ~ path("checkOut" / IntNumber) { id =>
-    get {
-      complete("Your total price is")
-      complete(repo4.all(id))
-    }
+    } ~
+      path("checkOut" / IntNumber) { id =>
+        get {
+         complete(repo4.all(id))
+        }
 
   } ~
     path("getAccountDetails") {

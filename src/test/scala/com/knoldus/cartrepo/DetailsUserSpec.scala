@@ -18,10 +18,8 @@ class DetailsUserSpec extends FunSuite with ScalaFutures with DetailsUser {
   test("Get Details of all users") {
     val response = testObj.all
     whenReady(response) { y =>
-      assert(y === Vector(UserDetails(1, "male", "kaushik123", "12345", "abc@gmail.com", "kaushik", "Nath")))
-
+      assert(y === Seq(UserDetails(1, "male", "kaushik123", "12345", "abc@gmail.com", "kaushik", "Nath")))
     }
-
   }
 
   test("Register a new user") {
@@ -35,7 +33,7 @@ class DetailsUserSpec extends FunSuite with ScalaFutures with DetailsUser {
   test("Authenticate an user") {
     val result = testObj.authentiacteUser(2)
     whenReady(result) { status =>
-      assert(status === Vector(true))
+      assert(status === Seq(UserDetails(2, "male", "testUser", "54321", "test@gmail.com", "test123", "")))
     }
   }
 }
