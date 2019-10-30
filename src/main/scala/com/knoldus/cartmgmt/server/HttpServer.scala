@@ -2,25 +2,36 @@ package com.knoldus.cartmgmt.server
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives._
-import akka.stream.{ ActorMaterializer, Materializer }
-
-import scala.io.StdIn
-import akka.http.scaladsl.server.Route
+import akka.stream.{ActorMaterializer, Materializer}
 import com.knoldus.cartmgmt.config.CartMgmtConfig
-import akka.http.scaladsl.Http
-import com.knoldus.cartmgmt.services.HttpService
+import com.knoldus.cartmgmt.routes.AllRoutesImpl
 
 import scala.concurrent.ExecutionContext
+import scala.io.StdIn
 
-trait HttpServer extends CartMgmtConfig with HttpService {
-  implicit def system: ActorSystem
-  implicit def materializer: Materializer
+class HttpServer(implicit val system: ActorSystem, implicit val materializer: Materializer)
+  extends AllRoutesImpl with CartMgmtConfig {
 
-  val routes: Route
-  Http().bindAndHandle(routes, httpHost, httpPort)
-  println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
-  StdIn.readLine()
+  def startServer(address: String, port: Int) {
+    implicit val executor: ExecutionContext = system.dispatcher
+
+    val bindingFuture = Http().bindAndHandle(routes, httpHost, httpPort)
+
+    println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
+    StdIn.readLine()
+    bindingFuture
+      .flatMap(_.unbind())
+      .onComplete(_ => system.terminate())
+  }
 }
 
+object HttpServer {
+
+  def main(args: Array[String]): Unit = {
+    implicit val actorSystem = ActorSystem("rest-server")
+    implicit val materializer = ActorMaterializer()
+
+    val server = new HttpServer()
+    server.startServer("localhost", 8080)
+  }
+}

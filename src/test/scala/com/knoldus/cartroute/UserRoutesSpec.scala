@@ -1,43 +1,54 @@
 import akka.http.scaladsl.model.{HttpEntity, HttpMethods, HttpRequest, MediaTypes}
-import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.util.ByteString
-import com.knoldus.cartmgmt.data.model.{JsonSupport, UserDetails}
-import com.knoldus.cartmgmt.data.persistence.{AccountUser, CartUser, DetailsUser}
+import com.knoldus.cartmgmt.data.model.{JsonSupport, UserAccount, UserCart, UserDetails}
 import com.knoldus.cartmgmt.routes.AllRoutes
-import com.knoldus.cartrepo.H2Impl
+import com.knoldus.cartmgmt.service.{UserAccountServiceImpl, UserCartServiceImpl, UserDetailsServiceImpl}
+import org.mockito.Mockito._
 import org.scalatest.{Matchers, WordSpec}
+import org.scalatestplus.mockito.MockitoSugar
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class UserRoutesSpec extends WordSpec with Matchers with ScalatestRouteTest with DetailsUser with AccountUser with CartUser with JsonSupport {
+class UserRoutesSpec extends WordSpec with Matchers with ScalatestRouteTest with MockitoSugar with JsonSupport {
 
-  lazy val testUserDetailsRepo: UserDetailsRepository = new UserDetailsRepository with H2Impl
-  lazy val testUserAccountRepo: UserAccountRepo = new UserAccountRepo with H2Impl
-  lazy val testCartItemRrepo: UserCartRepo = new UserCartRepo with H2Impl
-  lazy val testRoutes: Route = new AllRoutes(testUserDetailsRepo, testUserAccountRepo, testCartItemRrepo).routes
   implicit val timeout = RouteTestTimeout(3 seconds)
+  val mockUserAccountService = mock[UserAccountServiceImpl]
+  val mockCartService = mock[UserCartServiceImpl]
+  val mockUserDetailsService = mock[UserDetailsServiceImpl]
+
+  object TestObject extends AllRoutes {
+    val userDetailsService = mockUserDetailsService
+    val userCartService = mockCartService
+    val userAccountService = mockUserAccountService
+  }
 
   "The service" should {
-    "return the list of all available users using GET request" in {
-
-      Get("/getAllUser") ~> testRoutes ~> check {
-        responseAs[Vector[UserDetails]] shouldEqual (Vector(UserDetails(1, "male", "kaushik123", "12345", "abc@gmail.com", "kaushik", "Nath")))
+    "fetch all employees stored in the Database" in {
+      when(mockUserDetailsService.getAll).thenReturn(Future[Seq[UserDetails]](Seq(UserDetails(1, "male", "test12", "12345", "test12@gmail.com", "testX", "last"))))
+      Get("/getAllUser") ~> TestObject.routes ~> check {
+        status.isSuccess() shouldEqual true
+        responseAs[Seq[UserDetails]] shouldEqual (Seq(UserDetails(1, "male", "test12", "12345", "test12@gmail.com", "testX", "last")))
       }
     }
+  }
 
+  "The service" should {
     "return user registered as response for a Post request to /registerUser" in {
+
+      when(mockUserDetailsService.registerNewUser(UserDetails(1, "male", "John12", "12345", "test@gmail.com", "John", "Doe"))).thenReturn(Future[Int](1))
 
       val jsonRequest = ByteString(
         s"""
            |{
-           |    "userId": 1,
+           |    "userId":1,
            |    "gender":"male",
-           |    "userName": "John12",
-           |    "password": "12345",
-           |    "email": "test@gmail.com",
-           |    "firstName": "John",
-           |    "lastName": "Doe"
+           |    "userName":"John12",
+           |    "password":"12345",
+           |    "email":"test@gmail.com",
+           |    "firstName":"John",
+           |    "lastName":"Doe"
            |}
         """.stripMargin)
 
@@ -46,65 +57,88 @@ class UserRoutesSpec extends WordSpec with Matchers with ScalatestRouteTest with
         uri = "/registerUser",
         entity = HttpEntity(MediaTypes.`application/json`, jsonRequest))
 
-      postRequest ~> testRoutes ~> check {
+      postRequest ~> TestObject.routes ~> check {
         status.isSuccess() shouldEqual true
         responseAs[String] shouldEqual "User registered"
       }
-
     }
+  }
+
+  "The service" should {
     "return newItem is added as response for a Post request to /addItem" in {
 
+      when(mockUserDetailsService.verifyUser(1)).thenReturn(Future[Seq[UserDetails]](Seq(UserDetails(1, "male", "John12", "12345", "test@gmail.com", "John", "Doe"))))
+
+      when(mockCartService.verifyUIid(3, 1)).thenReturn(Future[Seq[UserCart]](Seq()))
+
+      when(mockCartService.insertNewRow(UserCart(1, 3, 3, 600))).thenReturn(Future[Int](1))
+
       val jsonRequest = ByteString(
         s"""
            |{
-           |    "userId": 2,
-           |    "itemId":3,newItem is added
-           |    "quantity": 3,
-           |    "price": 600
+           |    "userId":1,
+           |    "itemId":3,
+           |    "quantity":3,
+           |    "price":600
            |}
-        """.stripMargin)
+          """.stripMargin)
       val postRequest = HttpRequest(
         HttpMethods.POST,
         uri = "/addItem",
         entity = HttpEntity(MediaTypes.`application/json`, jsonRequest))
 
-      postRequest ~> testRoutes ~> check {
-        status.isSuccess() shouldEqual true
+      postRequest ~> TestObject.routes ~> check {
         responseAs[String] shouldEqual "newItem is added"
-
       }
-
     }
-    "return no User found as response for a Post request to /addItem" in {
+  }
+
+  "The service" should {
+    "return item is updated as response for a Post request to /addItem" in {
+
+      when(mockUserDetailsService.verifyUser(1)).thenReturn(Future[Seq[UserDetails]](Seq(UserDetails(2, "male", "kevin12", "xyz", "kev@gmail.com", "kevin", "john"))))
+
+      when(mockCartService.verifyUIid(3, 1)).thenReturn(Future[Seq[UserCart]](Seq(UserCart(1,3,4,500))))
+
+      when(mockCartService.insertQuantity(UserCart(1, 3, 4, 500))).thenReturn(Future[Int](1))
 
       val jsonRequest = ByteString(
         s"""
            |{
-           |    "userId": 1,
-           |    "itemId":2,
-           |    "quantity": 2,
-           |    "price": 500
+           |    "userId":1,
+           |    "itemId":3,
+           |    "quantity":4,
+           |    "price":500
            |}
-        """.stripMargin)
+          """.stripMargin)
       val postRequest = HttpRequest(
         HttpMethods.POST,
         uri = "/addItem",
         entity = HttpEntity(MediaTypes.`application/json`, jsonRequest))
 
-      postRequest ~> testRoutes ~> check {
+      postRequest ~> TestObject.routes ~> check {
+        responseAs[String] shouldEqual "item updated"
+      }
+    }
+  }
+
+  "The service" should {
+    "fetch the total checkout price of an user" in {
+      when(mockCartService.getAll(1)).thenReturn(Future[Vector[Float]](Vector(500)))
+      Get("/checkOut/1") ~> TestObject.routes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] shouldEqual "no user found"
-
-      }
-
-    }
-
-    "return the total price after checkout for a user using GET request" in {
-
-      Get("/checkOut/1") ~> testRoutes ~> check {
-        responseAs[Vector[UserDetails]] shouldEqual (Vector(1000))
+        responseAs[Vector[Float]] shouldEqual (Vector(500))
       }
     }
+  }
 
+  "The service" should {
+    "fetch the balance of a user from Database" in {
+      when(mockUserAccountService.getAll).thenReturn(Future[Seq[UserAccount]](Seq(UserAccount(1, "test", 2000))))
+      Get("/getAccountDetails") ~> TestObject.routes ~> check {
+        status.isSuccess() shouldEqual true
+        responseAs[Seq[UserAccount]] shouldEqual (Seq(UserAccount(1, "test", 2000)))
+      }
+    }
   }
 }

@@ -1,27 +1,29 @@
 package com.knoldus.cartmgmt.routes
 
-import akka.http.scaladsl.server.Directives.{path, _}
+import akka.http.scaladsl.server.Directives.{ path, _ }
 import akka.http.scaladsl.server.Route
 import com.knoldus.cartmgmt.config.CartMgmtConfig
-import com.knoldus.cartmgmt.data.model.{JsonSupport, UserCart, UserDetails}
-import com.knoldus.cartmgmt.data.persistence._
+import com.knoldus.cartmgmt.data.model.{ JsonSupport, UserCart, UserDetails }
+import com.knoldus.cartmgmt.service._
 
-import scala.concurrent.ExecutionContext
-import scala.util.Success
+import scala.util.{ Failure, Success }
 
-class AllRoutes(repo: DetailsUser#UserDetailsRepository, repo3: AccountUser#UserAccountRepo, repo4: CartUser#UserCartRepo)(implicit ex: ExecutionContext)
-  extends JsonSupport with CartMgmtConfig {
+trait AllRoutes extends JsonSupport with CartMgmtConfig {
+
+  val userDetailsService: UserDetailsService
+  val userCartService: UserCartService
+  val userAccountService: UserAccountService
 
   val routes: Route = path("getAllUser") {
     get {
-      complete(repo.all)
+      complete(userDetailsService.getAll)
     }
 
   } ~
     path("registerUser") {
       post {
         entity(as[UserDetails]) { user =>
-          val stored = repo.registerUser(user)
+          val stored = userDetailsService.registerNewUser(user)
           onComplete(stored) {
             done => complete("User registered")
           }
@@ -31,19 +33,22 @@ class AllRoutes(repo: DetailsUser#UserDetailsRepository, repo3: AccountUser#User
     pathPrefix("addItem") {
       post {
         entity(as[UserCart]) { item =>
-          onComplete(repo.authentiacteUser(item.userId)) {
-            case Success(user) if user.length != 0 => onComplete(repo4.checkUIid(item.itemId, item.userId)) {
-              case Success(itemPresent) if itemPresent.length != 0 => onComplete(repo4.addQuantity(item)) { done =>
+          onComplete(userDetailsService.verifyUser(item.userId)) {
+            case Success(user) if user.length != 0 => onComplete(userCartService.verifyUIid(item.itemId, item.userId)) {
+              case Success(itemPresent) if itemPresent.length != 0 => onComplete(userCartService.insertQuantity(item)) { done =>
                 complete("item updated")
               }
 
-              case Success(newItem) => onComplete(repo4.addNewRow(item)) {
+              case Success(newItem) if newItem.isEmpty => onComplete(userCartService.insertNewRow(item)) {
                 done => complete("newItem is added")
               }
+
+              case Failure(ex) => complete(ex.getMessage)
 
             }
 
             case Success(message) => complete("no user found")
+            case Failure(ex) => complete(ex.getMessage)
           }
 
         }
@@ -51,17 +56,24 @@ class AllRoutes(repo: DetailsUser#UserDetailsRepository, repo3: AccountUser#User
       }
 
     } ~
-      path("checkOut" / IntNumber) { id =>
-        get {
-         complete(repo4.all(id))
-        }
+    path("checkOut" / IntNumber) { id =>
+      get {
 
-  } ~
+        complete(userCartService.getAll(id))
+      }
+
+    } ~
     path("getAccountDetails") {
       get {
-        complete(repo3.all)
+        complete(userAccountService.getAll)
       }
 
     }
 
+}
+
+class AllRoutesImpl extends AllRoutes {
+  val userDetailsService: UserDetailsService = UserDetailsServiceImpl
+  val userCartService = UserCartServiceImpl
+  val userAccountService = UserAccountServiceImpl
 }

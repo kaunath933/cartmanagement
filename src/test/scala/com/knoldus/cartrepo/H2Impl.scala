@@ -1,6 +1,6 @@
 package com.knoldus.cartrepo
 
-import com.knoldus.cartmgmt.data.persistence.DB
+import com.knoldus.cartmgmt.config.DB
 import slick.jdbc.JdbcProfile
 
 trait H2Impl extends DB {
@@ -9,7 +9,6 @@ trait H2Impl extends DB {
 
   import driver.api._
 
-  val db: driver.backend.DatabaseDef = {
-    Database.forConfig("h2url")
-  }
+  val db: driver.backend.DatabaseDef = Database.forConfig("h2url")
+
 }

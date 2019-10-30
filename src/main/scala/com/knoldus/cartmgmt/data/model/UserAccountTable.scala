@@ -1,12 +1,11 @@
-package com.knoldus.cartmgmt.data.persistence
+package com.knoldus.cartmgmt.data.model
 
-import com.knoldus.cartmgmt.data.model._
-import slick.jdbc.MySQLProfile.api._
+import com.knoldus.cartmgmt.config.DB
 import slick.lifted.ProvenShape
 
-import scala.concurrent.{ExecutionContext, Future}
-
-trait AccountUser {
+trait UserAccountTable {
+  this: DB =>
+  import driver.api._
 
   class UserAccountTable(tag: Tag) extends Table[UserAccount](tag, "USER_ACCOUNT") {
     def userId: Rep[Int] = column[Int]("userId", O.PrimaryKey)
@@ -19,13 +18,4 @@ trait AccountUser {
   }
 
   val userAccountRef = TableQuery[UserAccountTable]
-
-  class UserAccountRepo(implicit ec2: ExecutionContext) {
-    this: DB =>
-    def all: Future[Seq[UserAccount]] = db.run {
-      userAccountRef.result
-    }
-
-  }
-
 }

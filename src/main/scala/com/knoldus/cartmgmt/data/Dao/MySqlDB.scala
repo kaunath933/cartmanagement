@@ -1,5 +1,6 @@
-package com.knoldus.cartmgmt.data.persistence
+package com.knoldus.cartmgmt.data.Dao
 
+import com.knoldus.cartmgmt.config.DB
 import slick.jdbc.JdbcProfile
 
 trait MySqlDB extends DB {
